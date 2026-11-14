@@ -226,37 +226,22 @@ public class Computer {
 	public void pressKey(final char ch, final int key) {
 		if (this.m_on) {
 			if (key >= 0) {
-				this.queueLuaEvent(new Computer.Event() {
-					@Override
-					public LuaValue[] getArguments() {
-						return new LuaValue[] {LuaValue.valueOf("key"), LuaValue.valueOf(key)};
-					}
-				});
+				this.queueLuaEvent(() -> new LuaValue[] {LuaValue.valueOf("key"), LuaValue.valueOf(key)});
 			}
 
 			if (SharedConstants.allowedCharacters.indexOf(ch) >= 0) {
-				this.queueLuaEvent(new Computer.Event() {
-					@Override
-					public LuaValue[] getArguments() {
-						return new LuaValue[] {LuaValue.valueOf("char"), LuaValue.valueOf("" + ch)};
-					}
-				});
+				this.queueLuaEvent(() -> new LuaValue[] {LuaValue.valueOf("char"), LuaValue.valueOf("" + ch)});
 			}
 		}
 	}
 
 	public void terminate() {
 		if (this.m_on) {
-			this.queueLuaEvent(new Computer.Event() {
-				@Override
-				public LuaValue[] getArguments() {
-					return new LuaValue[] {LuaValue.valueOf("terminate")};
-				}
-			});
+			this.queueLuaEvent(() -> new LuaValue[] {LuaValue.valueOf("terminate")});
 		}
 	}
 
-	public void advance(double d) {
+	public void advance(double time) {
 		synchronized (this) {
 			if (!this.m_on && this.m_rebootDesired) {
 				this.turnOn();
@@ -285,13 +270,13 @@ public class Computer {
 					}
 				}
 
-				this.m_clock += d;
+				this.m_clock += time;
 				synchronized (this.m_timers) {
 					Iterator<Timer> iterator = this.m_timers.iterator();
 
 					while (iterator.hasNext()) {
 						Computer.Timer timer = iterator.next();
-						timer.timeLeft -= d;
+						timer.timeLeft -= time;
 						if (timer.timeLeft <= 0.0) {
 							final LuaValue token = timer.token;
 							this.queueLuaEvent(() -> new LuaValue[] {LuaValue.valueOf("timer"), token});
@@ -301,79 +286,64 @@ public class Computer {
 				}
 
 				synchronized (this.m_alarms) {
-					double d1 = this.m_time;
-					double d2 = this.m_environment.getTimeOfDay();
-					double d3 = d1;
-					double d4 = d2;
-					if (d2 < d1) {
-						d4 = d2 + 24.0;
+					double computerTime = this.m_time;
+					double worldTime = this.m_environment.getTimeOfDay();
+					if (worldTime < computerTime) {
+						worldTime = worldTime + 24.0;
 					}
 
 					ArrayList<Computer.Alarm> finishedAlarms = null;
-					Iterator<Computer.Alarm> it = this.m_alarms.iterator();
+					Iterator<Computer.Alarm> alarms = this.m_alarms.iterator();
 
-					while (it.hasNext()) {
-						Computer.Alarm al = it.next();
-						double d5 = al.time;
-						if (d5 < d3) {
-							d5 += 24.0;
+					while (alarms.hasNext()) {
+						Computer.Alarm alarm = alarms.next();
+						double alarmTime = alarm.time;
+						if (alarmTime < computerTime) {
+							alarmTime += 24.0;
 						}
 
-						if (d4 >= d5) {
+						if (worldTime >= alarmTime) {
 							if (finishedAlarms == null) {
 								finishedAlarms = new ArrayList<>();
 							}
 
-							finishedAlarms.add(al);
-							it.remove();
+							finishedAlarms.add(alarm);
+							alarms.remove();
 						}
 					}
 
 					if (finishedAlarms != null) {
 						Collections.sort(finishedAlarms);
-						it = finishedAlarms.iterator();
+						alarms = finishedAlarms.iterator();
 
-						while (it.hasNext()) {
-							final LuaValue token = it.next().token;
-							this.queueLuaEvent(new Computer.Event() {
-								@Override
-								public LuaValue[] getArguments() {
-									return new LuaValue[] {LuaValue.valueOf("alarm"), token};
-								}
-							});
+						while (alarms.hasNext()) {
+							final LuaValue token = alarms.next().token;
+							this.queueLuaEvent(() -> new LuaValue[] {LuaValue.valueOf("alarm"), token});
 						}
 					}
 
-					this.m_time = d2;
+					this.m_time = worldTime;
 				}
 
 				synchronized (this.m_httpRequests) {
-					Iterator<HTTPRequest> iterator1 = this.m_httpRequests.iterator();
+					Iterator<HTTPRequest> httpRequests = this.m_httpRequests.iterator();
 
-					while (iterator1.hasNext()) {
-						HTTPRequest httprequest = (HTTPRequest) iterator1.next();
+					while (httpRequests.hasNext()) {
+						HTTPRequest httprequest = httpRequests.next();
 						if (httprequest.isComplete()) {
 							final String url = httprequest.getURL();
 							if (httprequest.wasSuccessful()) {
 								final BufferedReader contents = httprequest.getContents();
-								this.queueLuaEvent(new Computer.Event() {
-									@Override
-									public LuaValue[] getArguments() {
-										LuaValue luavalue = Computer.this.wrapBufferedReader(contents);
-										return new LuaValue[] {LuaValue.valueOf("http_success"), LuaValue.valueOf(url), luavalue};
-									}
+								this.queueLuaEvent(() -> {
+									LuaValue luavalue = Computer.this.wrapBufferedReader(contents);
+									return new LuaValue[] {LuaValue.valueOf("http_success"), LuaValue.valueOf(url), luavalue};
 								});
 							}
 							else {
-								this.queueLuaEvent(new Computer.Event() {
-									@Override
-									public LuaValue[] getArguments() {
-										return new LuaValue[] {LuaValue.valueOf("http_failure"), LuaValue.valueOf(url)};
-									}
-								});
+								this.queueLuaEvent(() -> new LuaValue[] {LuaValue.valueOf("http_failure"), LuaValue.valueOf(url)});
 							}
 
-							iterator1.remove();
+							httpRequests.remove();
 						}
 					}
 				}

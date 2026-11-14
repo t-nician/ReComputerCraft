@@ -9,8 +9,10 @@ import net.minecraft.server.EntityHuman;
 import net.minecraft.server.NBTTagCompound;
 import net.minecraft.server.TileEntity;
 import net.minecraft.server.mod_ComputerCraft;
+import org.bukkit.entity.Player;
 
 import java.io.File;
+import java.util.HashMap;
 
 
 public class NetworkedComputerHelper extends NetworkedTerminalHelper implements INetworkedEntity, IComputerEntity, IPeripheral, IComputerEnvironment {
@@ -332,12 +334,26 @@ public class NetworkedComputerHelper extends NetworkedTerminalHelper implements 
 		}
 	}
 
+	private final HashMap<String, Long> lastCharTime = new HashMap<>();
+	private final HashMap<String, Integer> threatScore = new HashMap<>();
 	@Override
 	public void handlePacket(ComputerCraftPacket computercraftpacket, EntityHuman entityhuman) {
 		super.handlePacket(computercraftpacket, entityhuman);
 		if (mod_ComputerCraft.isMultiplayerServer()) {
 			switch (computercraftpacket.packetType) {
 				case 2:
+					final long now = System.nanoTime();
+					final long last = lastCharTime.getOrDefault(entityhuman.name, 0L);
+					lastCharTime.put(entityhuman.name, now);
+					if (last + 25_000 > now) {
+						final int score = threatScore.getOrDefault(entityhuman.name, 0) + 1;
+						threatScore.put(entityhuman.name, score);
+						if (score > 100 && entityhuman.getBukkitEntity() instanceof Player) {
+							threatScore.remove(entityhuman.name);
+							((Player)entityhuman.getBukkitEntity()).kickPlayer("Abnormal input rate detected. Hacking?");
+							return;
+						}
+					}
 					int i = computercraftpacket.dataInt[3];
 					char c = computercraftpacket.dataString[0].charAt(0);
 					this.pressKey(c, i);

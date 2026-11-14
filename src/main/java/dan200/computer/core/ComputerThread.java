@@ -6,7 +6,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class ComputerThread {
 	private static final Object m_lock = new Object();
 	private static Thread m_thread = null;
-	private static final LinkedBlockingQueue<Task> m_taskQueue = new LinkedBlockingQueue<>(256); // TODO: Set a configuration value for max task queue size
+	private static final LinkedBlockingQueue<Task> m_taskQueue = new LinkedBlockingQueue<>(256);
 	private static boolean m_busy = false;
 	private static boolean m_running = false;
 	private static boolean m_stopped = false;
@@ -34,7 +34,7 @@ public class ComputerThread {
 								try {
 									task.execute();
 								} catch (Exception var2) {
-									System.out.println("ComputerCraft: Error running task.");
+									System.out.println("ComputerCraft: Error running task for computer " + (task.getOwner() != null ? task.getOwner().getID() : "???"));
 									var2.printStackTrace();
 								}
 							});
@@ -52,8 +52,8 @@ public class ComputerThread {
 								}
 
 								if (thread.isAlive()) {
-									System.out.println("ComputerCraft: Warning! Failed to abort a Computer. Dangling lua thread could cause errors.");
-									thread.stop();
+									System.out.println("ComputerCraft: Warning! Failed to abort computer " + (computer != null ? computer.getID() : "???") + "!. Dangling lua thread could cause errors.");
+									thread.interrupt();
 								}
 							}
 						} catch (InterruptedException ignored) {
@@ -80,7 +80,7 @@ public class ComputerThread {
 	public static void queueTask(ComputerThread.Task task) {
 		boolean flag = m_taskQueue.offer(task);
 		if (!flag) {
-			System.out.println("ComputerCraft: Warning! Computer task queue overflowed");
+			System.out.println("ComputerCraft: Warning! Computer task queue overflowed. Task from computer " + (task.getOwner() != null ? task.getOwner().getID() : "???") + " rejected!");
 		}
 	}
 
