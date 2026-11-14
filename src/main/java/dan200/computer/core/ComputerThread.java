@@ -1,15 +1,18 @@
 package dan200.computer.core;
 
+import org.luaj.vm2.OrphanedThread;
+
 import java.util.concurrent.LinkedBlockingQueue;
 
 
 public class ComputerThread {
 	private static final Object m_lock = new Object();
-	private static Thread m_thread = null;
 	private static final LinkedBlockingQueue<Task> m_taskQueue = new LinkedBlockingQueue<>(256);
+	private static Thread m_thread = null;
 	private static boolean m_busy = false;
 	private static boolean m_running = false;
 	private static boolean m_stopped = false;
+	private static ThreadGroup genericThreadGroup = new ThreadGroup("ReCC-Generic");
 
 	public static void start() {
 		synchronized (m_lock) {
@@ -30,14 +33,20 @@ public class ComputerThread {
 						try {
 							final Task task = ComputerThread.m_taskQueue.take();
 							ComputerThread.m_busy = true;
-							Thread thread = new Thread(() -> {
+							// Create named thread; allow a maximum stack of 1MB
+							Thread thread = new Thread((task.getOwner() != null ? task.getOwner().getThreadGroup() : genericThreadGroup), () -> {
 								try {
 									task.execute();
+								} catch (OrphanedThread ignored) {
+								} catch (StackOverflowError e) {
+									System.out.println("ReCC: Stack overflow for computer " + (task.getOwner() != null ? task.getOwner().getID() : "???"));
+								} catch (OutOfMemoryError e) {
+									System.out.println("ReCC: Out of memory for computer " + (task.getOwner() != null ? task.getOwner().getID() : "???"));
 								} catch (Exception var2) {
-									System.out.println("ComputerCraft: Error running task for computer " + (task.getOwner() != null ? task.getOwner().getID() : "???"));
+									System.out.println("ReCC: Error running task for computer " + (task.getOwner() != null ? task.getOwner().getID() : "???"));
 									var2.printStackTrace();
 								}
-							});
+							}, "ReCC-Computer-" + (task.getOwner() != null ? task.getOwner().getID() : "???"), 1_048_576);
 							thread.start();
 							thread.join(5000L);
 							if (thread.isAlive()) {
@@ -49,10 +58,12 @@ public class ComputerThread {
 										computer.turnOff();
 										thread.join(1250L);
 									}
+									computer.interruptThreads();
+									thread.join(500L);
 								}
 
 								if (thread.isAlive()) {
-									System.out.println("ComputerCraft: Warning! Failed to abort computer " + (computer != null ? computer.getID() : "???") + "!. Dangling lua thread could cause errors.");
+									System.out.println("ReCC: Warning! Failed to abort computer " + (computer != null ? computer.getID() : "???") + "!. Dangling lua thread could cause errors.");
 									thread.interrupt();
 								}
 							}
@@ -61,7 +72,7 @@ public class ComputerThread {
 							ComputerThread.m_busy = false;
 						}
 					}
-				}, "CCThread"); // Added thread name
+				}, "ReCC-Main");
 				m_thread.start();
 				m_running = true;
 			}
@@ -80,7 +91,7 @@ public class ComputerThread {
 	public static void queueTask(ComputerThread.Task task) {
 		boolean flag = m_taskQueue.offer(task);
 		if (!flag) {
-			System.out.println("ComputerCraft: Warning! Computer task queue overflowed. Task from computer " + (task.getOwner() != null ? task.getOwner().getID() : "???") + " rejected!");
+			System.out.println("ReCC: Warning! Computer task queue overflowed. Task from computer " + (task.getOwner() != null ? task.getOwner().getID() : "???") + " rejected!");
 		}
 	}
 

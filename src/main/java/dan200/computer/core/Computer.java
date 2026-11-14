@@ -51,6 +51,7 @@ public class Computer {
 	private final List<Computer.PeripheralWrapper> m_peripheralsAsAPIs;
 	private double m_clock;
 	private double m_time;
+	private ThreadGroup threadGroup;
 
 	public Computer(IComputerEnvironment icomputerenvironment, Terminal terminal) {
 		this.m_environment = icomputerenvironment;
@@ -85,6 +86,36 @@ public class Computer {
 		this.m_peripheralsAsAPIs = new ArrayList<>();
 		this.m_clock = 0.0;
 		this.m_time = 0.0;
+	}
+
+	public synchronized ThreadGroup getThreadGroup() {
+		if (threadGroup == null) {
+			threadGroup = new ThreadGroup("ReCC-Computer-" + m_id);
+			threadGroup.setMaxPriority(Thread.MIN_PRIORITY);
+		}
+		return threadGroup;
+	}
+
+	public synchronized void interruptThreads() {
+		if (threadGroup != null) {
+			threadGroup.interrupt();
+
+			long timeout = System.currentTimeMillis() + 20;
+			while (threadGroup.activeCount() > 0 && System.currentTimeMillis() < timeout) {
+				try {
+					Thread.sleep(1);
+				} catch (InterruptedException ignored) {}
+			}
+			try {
+				threadGroup.stop();
+				threadGroup.destroy();
+			}
+			catch (IllegalThreadStateException e) {
+				System.out.println("ReCC: Error destroying thread group for computer " + m_id);
+				e.printStackTrace();
+			}
+			threadGroup = null;
+		}
 	}
 
 	public void setOwner(IComputerEnvironment icomputerenvironment) {
