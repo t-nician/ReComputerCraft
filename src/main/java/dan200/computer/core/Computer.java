@@ -290,16 +290,11 @@ public class Computer {
 					Iterator<Timer> iterator = this.m_timers.iterator();
 
 					while (iterator.hasNext()) {
-						Computer.Timer timer = (Computer.Timer) iterator.next();
+						Computer.Timer timer = iterator.next();
 						timer.timeLeft -= d;
 						if (timer.timeLeft <= 0.0) {
 							final LuaValue token = timer.token;
-							this.queueLuaEvent(new Computer.Event() {
-								@Override
-								public LuaValue[] getArguments() {
-									return new LuaValue[] {LuaValue.valueOf("timer"), token};
-								}
-							});
+							this.queueLuaEvent(() -> new LuaValue[] {LuaValue.valueOf("timer"), token});
 							iterator.remove();
 						}
 					}
@@ -623,11 +618,9 @@ public class Computer {
 
 	private void tryAbort() {
 		if (this.m_stopped) {
-			LuaValue luavalue = this.m_globals.get("coroutine");
-			if (luavalue != null) {
-				while (true) {
-					luavalue.get("yield").call();
-				}
+			LuaValue coroutine = this.m_globals.get("coroutine");
+			if (coroutine != null) {
+				coroutine.get("yield").call();
 			}
 		}
 
@@ -638,28 +631,28 @@ public class Computer {
 	}
 
 	private void initLua() {
-		LuaTable luatable = JsePlatform.debugGlobals();
-		LuaValue luavalue = luatable.get("loadstring");
-		luatable.set("collectgarbage", LuaValue.NIL);
-		luatable.set("dofile", LuaValue.NIL);
-		luatable.set("load", LuaValue.NIL);
-		luatable.set("loadfile", LuaValue.NIL);
-		luatable.set("module", LuaValue.NIL);
-		luatable.set("require", LuaValue.NIL);
-		luatable.set("package", LuaValue.NIL);
-		luatable.set("io", LuaValue.NIL);
-		luatable.set("os", LuaValue.NIL);
-		luatable.set("debug", LuaValue.NIL);
-		luatable.set("print", LuaValue.NIL);
-		luatable.set("luajava", LuaValue.NIL);
-		LuaTable luatable1 = new LuaTable();
-		luatable1.set("write", new OneArgFunction() {
+		LuaTable globalTable = JsePlatform.debugGlobals();
+		LuaValue loadstringValue = globalTable.get("loadstring");
+		globalTable.set("collectgarbage", LuaValue.NIL);
+		globalTable.set("dofile", LuaValue.NIL);
+		globalTable.set("load", LuaValue.NIL);
+		globalTable.set("loadfile", LuaValue.NIL);
+		globalTable.set("module", LuaValue.NIL);
+		globalTable.set("require", LuaValue.NIL);
+		globalTable.set("package", LuaValue.NIL);
+		globalTable.set("io", LuaValue.NIL);
+		globalTable.set("os", LuaValue.NIL);
+		globalTable.set("debug", LuaValue.NIL);
+		globalTable.set("print", LuaValue.NIL);
+		globalTable.set("luajava", LuaValue.NIL);
+		LuaTable termTable = new LuaTable();
+		termTable.set("write", new OneArgFunction() {
 			@Override
-			public LuaValue call(LuaValue luavalue3) {
+			public LuaValue call(LuaValue value) {
 				Computer.this.tryAbort();
 				String s1 = "";
-				if (!luavalue3.isnil()) {
-					s1 = luavalue3.toString();
+				if (!value.isnil()) {
+					s1 = value.toString();
 				}
 
 				synchronized (Computer.this.m_terminal) {
@@ -670,11 +663,11 @@ public class Computer {
 				return LuaValue.NIL;
 			}
 		});
-		luatable1.set("scroll", new OneArgFunction() {
+		termTable.set("scroll", new OneArgFunction() {
 			@Override
-			public LuaValue call(LuaValue luavalue3) {
+			public LuaValue call(LuaValue amount) {
 				Computer.this.tryAbort();
-				int i = luavalue3.checkint();
+				int i = amount.checkint();
 				synchronized (Computer.this.m_terminal) {
 					Computer.this.m_terminal.scroll(i);
 				}
@@ -682,12 +675,12 @@ public class Computer {
 				return LuaValue.NIL;
 			}
 		});
-		luatable1.set("setCursorPos", new TwoArgFunction() {
+		termTable.set("setCursorPos", new TwoArgFunction() {
 			@Override
-			public LuaValue call(LuaValue luavalue3, LuaValue luavalue4) {
+			public LuaValue call(LuaValue x, LuaValue y) {
 				Computer.this.tryAbort();
-				int i = luavalue3.checkint() - 1;
-				int j = luavalue4.checkint() - 1;
+				int i = x.checkint() - 1;
+				int j = y.checkint() - 1;
 				synchronized (Computer.this.m_terminal) {
 					Computer.this.m_terminal.setCursorPos(i, j);
 				}
@@ -695,11 +688,11 @@ public class Computer {
 				return LuaValue.NIL;
 			}
 		});
-		luatable1.set("setCursorBlink", new OneArgFunction() {
+		termTable.set("setCursorBlink", new OneArgFunction() {
 			@Override
-			public LuaValue call(LuaValue luavalue3) {
+			public LuaValue call(LuaValue blink) {
 				Computer.this.tryAbort();
-				boolean flag = luavalue3.checkboolean();
+				boolean flag = blink.checkboolean();
 				synchronized (Computer.this.m_terminal) {
 					Computer.this.m_terminal.setCursorBlink(flag);
 				}
@@ -707,7 +700,7 @@ public class Computer {
 				return LuaValue.NIL;
 			}
 		});
-		luatable1.set("getCursorPos", new VarArgFunction() {
+		termTable.set("getCursorPos", new VarArgFunction() {
 			@Override
 			public Varargs invoke(Varargs varargs) {
 				Computer.this.tryAbort();
@@ -721,7 +714,7 @@ public class Computer {
 				return LuaValue.varargsOf(new LuaValue[] {LuaValue.valueOf(i + 1), LuaValue.valueOf(j + 1)});
 			}
 		});
-		luatable1.set("getSize", new VarArgFunction() {
+		termTable.set("getSize", new VarArgFunction() {
 			@Override
 			public Varargs invoke(Varargs varargs) {
 				Computer.this.tryAbort();
@@ -735,7 +728,7 @@ public class Computer {
 				return LuaValue.varargsOf(new LuaValue[] {LuaValue.valueOf(i), LuaValue.valueOf(j)});
 			}
 		});
-		luatable1.set("clear", new ZeroArgFunction() {
+		termTable.set("clear", new ZeroArgFunction() {
 			@Override
 			public LuaValue call() {
 				Computer.this.tryAbort();
@@ -746,7 +739,7 @@ public class Computer {
 				return LuaValue.NIL;
 			}
 		});
-		luatable1.set("clearLine", new ZeroArgFunction() {
+		termTable.set("clearLine", new ZeroArgFunction() {
 			@Override
 			public LuaValue call() {
 				Computer.this.tryAbort();
@@ -757,9 +750,9 @@ public class Computer {
 				return LuaValue.NIL;
 			}
 		});
-		luatable.set("term", luatable1);
-		LuaTable luatable2 = new LuaTable();
-		luatable2.set("getSides", new ZeroArgFunction() {
+		globalTable.set("term", termTable);
+		LuaTable redstoneTable = new LuaTable();
+		redstoneTable.set("getSides", new ZeroArgFunction() {
 			@Override
 			public LuaValue call() {
 				Computer.this.tryAbort();
@@ -772,111 +765,111 @@ public class Computer {
 				return luatable7;
 			}
 		});
-		luatable2.set("setOutput", new TwoArgFunction() {
+		redstoneTable.set("setOutput", new TwoArgFunction() {
 			@Override
-			public LuaValue call(LuaValue luavalue3, LuaValue luavalue4) {
+			public LuaValue call(LuaValue side, LuaValue state) {
 				Computer.this.tryAbort();
-				int i = Computer.this.parseSide(luavalue3.checkstring().toString());
-				Computer.this.setOutput(i, luavalue4.checkboolean());
+				int i = Computer.this.parseSide(side.checkstring().toString());
+				Computer.this.setOutput(i, state.checkboolean());
 				return LuaValue.NIL;
 			}
 		});
-		luatable2.set("getOutput", new OneArgFunction() {
+		redstoneTable.set("getOutput", new OneArgFunction() {
 			@Override
-			public LuaValue call(LuaValue luavalue3) {
+			public LuaValue call(LuaValue side) {
 				Computer.this.tryAbort();
-				int i = Computer.this.parseSide(luavalue3.checkstring().toString());
+				int i = Computer.this.parseSide(side.checkstring().toString());
 				return LuaValue.valueOf(Computer.this.getOutput(i));
 			}
 		});
-		luatable2.set("getInput", new OneArgFunction() {
+		redstoneTable.set("getInput", new OneArgFunction() {
 			@Override
-			public LuaValue call(LuaValue luavalue3) {
+			public LuaValue call(LuaValue side) {
 				Computer.this.tryAbort();
-				int i = Computer.this.parseSide(luavalue3.checkstring().toString());
+				int i = Computer.this.parseSide(side.checkstring().toString());
 				return LuaValue.valueOf(Computer.this.getInput(i));
 			}
 		});
-		luatable2.set("setBundledOutput", new TwoArgFunction() {
+		redstoneTable.set("setBundledOutput", new TwoArgFunction() {
 			@Override
-			public LuaValue call(LuaValue luavalue3, LuaValue luavalue4) {
+			public LuaValue call(LuaValue side, LuaValue color) {
 				Computer.this.tryAbort();
-				int i = Computer.this.parseSide(luavalue3.checkstring().toString());
-				Computer.this.setBundledOutput(i, luavalue4.checkint());
+				int i = Computer.this.parseSide(side.checkstring().toString());
+				Computer.this.setBundledOutput(i, color.checkint());
 				return LuaValue.NIL;
 			}
 		});
-		luatable2.set("getBundledOutput", new OneArgFunction() {
+		redstoneTable.set("getBundledOutput", new OneArgFunction() {
 			@Override
-			public LuaValue call(LuaValue luavalue3) {
+			public LuaValue call(LuaValue side) {
 				Computer.this.tryAbort();
-				int i = Computer.this.parseSide(luavalue3.checkstring().toString());
+				int i = Computer.this.parseSide(side.checkstring().toString());
 				return LuaValue.valueOf(Computer.this.getBundledOutput(i));
 			}
 		});
-		luatable2.set("getBundledInput", new OneArgFunction() {
+		redstoneTable.set("getBundledInput", new OneArgFunction() {
 			@Override
-			public LuaValue call(LuaValue luavalue3) {
+			public LuaValue call(LuaValue side) {
 				Computer.this.tryAbort();
-				int i = Computer.this.parseSide(luavalue3.checkstring().toString());
+				int i = Computer.this.parseSide(side.checkstring().toString());
 				return LuaValue.valueOf(Computer.this.getBundledInput(i));
 			}
 		});
-		luatable2.set("testBundledInput", new TwoArgFunction() {
+		redstoneTable.set("testBundledInput", new TwoArgFunction() {
 			@Override
-			public LuaValue call(LuaValue luavalue3, LuaValue luavalue4) {
+			public LuaValue call(LuaValue side, LuaValue color) {
 				Computer.this.tryAbort();
-				int i = Computer.this.parseSide(luavalue3.checkstring().toString());
-				int j = luavalue4.checkint();
+				int i = Computer.this.parseSide(side.checkstring().toString());
+				int j = color.checkint();
 				int k = Computer.this.getBundledInput(i);
 				return LuaValue.valueOf((j & k) == j);
 			}
 		});
-		luatable.set("redstone", luatable2);
-		luatable.set("rs", luatable2);
-		LuaTable luatable3 = new LuaTable();
-		luatable3.set("list", new OneArgFunction() {
+		globalTable.set("redstone", redstoneTable);
+		globalTable.set("rs", redstoneTable);
+		LuaTable fsTable = new LuaTable();
+		fsTable.set("list", new OneArgFunction() {
 			@Override
-			public LuaValue call(LuaValue luavalue3) {
+			public LuaValue call(LuaValue path) {
 				Computer.this.tryAbort();
-				String s1 = luavalue3.checkstring().toString();
+				String s1 = path.checkstring().toString();
 
 				try {
 					String[] as = Computer.this.m_fileSystem.list(s1);
-					LuaTable luatable7 = new LuaTable();
+					LuaTable fileTable = new LuaTable();
 
 					for (int i = 0; i < as.length; i++) {
-						luatable7.set(i + 1, LuaValue.valueOf(as[i]));
+						fileTable.set(i + 1, LuaValue.valueOf(as[i]));
 					}
 
-					return luatable7;
+					return fileTable;
 				} catch (FileSystemException var6) {
 					throw new LuaError(var6.getMessage());
 				}
 			}
 		});
-		luatable3.set("combine", new TwoArgFunction() {
+		fsTable.set("combine", new TwoArgFunction() {
 			@Override
-			public LuaValue call(LuaValue luavalue3, LuaValue luavalue4) {
+			public LuaValue call(LuaValue pathA, LuaValue pathB) {
 				Computer.this.tryAbort();
-				String s1 = luavalue3.checkstring().toString();
-				String s2 = luavalue4.checkstring().toString();
+				String s1 = pathA.checkstring().toString();
+				String s2 = pathB.checkstring().toString();
 				return LuaValue.valueOf(Computer.this.m_fileSystem.combine(s1, s2));
 			}
 		});
-		luatable3.set("getName", new OneArgFunction() {
+		fsTable.set("getName", new OneArgFunction() {
 			@Override
-			public LuaValue call(LuaValue luavalue3) {
+			public LuaValue call(LuaValue path) {
 				Computer.this.tryAbort();
-				String s1 = luavalue3.checkstring().toString();
+				String s1 = path.checkstring().toString();
 				return LuaValue.valueOf(Computer.this.m_fileSystem.getName(s1));
 			}
 		});
-		luatable3.set("getSize", new OneArgFunction() {
+		fsTable.set("getSize", new OneArgFunction() {
 			@Override
-			public LuaValue call(LuaValue luavalue3) {
+			public LuaValue call(LuaValue path) {
 				Computer.this.tryAbort();
-				String s1 = luavalue3.checkstring().toString();
+				String s1 = path.checkstring().toString();
 
 				try {
 					return LuaValue.valueOf((double) Computer.this.m_fileSystem.getSize(s1));
@@ -885,11 +878,11 @@ public class Computer {
 				}
 			}
 		});
-		luatable3.set("exists", new OneArgFunction() {
+		fsTable.set("exists", new OneArgFunction() {
 			@Override
-			public LuaValue call(LuaValue luavalue3) {
+			public LuaValue call(LuaValue path) {
 				Computer.this.tryAbort();
-				String s1 = luavalue3.checkstring().toString();
+				String s1 = path.checkstring().toString();
 
 				try {
 					return LuaValue.valueOf(Computer.this.m_fileSystem.exists(s1));
@@ -898,11 +891,11 @@ public class Computer {
 				}
 			}
 		});
-		luatable3.set("isDir", new OneArgFunction() {
+		fsTable.set("isDir", new OneArgFunction() {
 			@Override
-			public LuaValue call(LuaValue luavalue3) {
+			public LuaValue call(LuaValue path) {
 				Computer.this.tryAbort();
-				String s1 = luavalue3.checkstring().toString();
+				String s1 = path.checkstring().toString();
 
 				try {
 					return LuaValue.valueOf(Computer.this.m_fileSystem.isDir(s1));
@@ -911,11 +904,11 @@ public class Computer {
 				}
 			}
 		});
-		luatable3.set("isReadOnly", new OneArgFunction() {
+		fsTable.set("isReadOnly", new OneArgFunction() {
 			@Override
-			public LuaValue call(LuaValue luavalue3) {
+			public LuaValue call(LuaValue path) {
 				Computer.this.tryAbort();
-				String s1 = luavalue3.checkstring().toString();
+				String s1 = path.checkstring().toString();
 
 				try {
 					return LuaValue.valueOf(Computer.this.m_fileSystem.isReadOnly(s1));
@@ -924,11 +917,11 @@ public class Computer {
 				}
 			}
 		});
-		luatable3.set("makeDir", new OneArgFunction() {
+		fsTable.set("makeDir", new OneArgFunction() {
 			@Override
-			public LuaValue call(LuaValue luavalue3) {
+			public LuaValue call(LuaValue path) {
 				Computer.this.tryAbort();
-				String s1 = luavalue3.checkstring().toString();
+				String s1 = path.checkstring().toString();
 
 				try {
 					Computer.this.m_fileSystem.makeDir(s1);
@@ -938,12 +931,12 @@ public class Computer {
 				}
 			}
 		});
-		luatable3.set("move", new TwoArgFunction() {
+		fsTable.set("move", new TwoArgFunction() {
 			@Override
-			public LuaValue call(LuaValue luavalue3, LuaValue luavalue4) {
+			public LuaValue call(LuaValue pathFrom, LuaValue pathTo) {
 				Computer.this.tryAbort();
-				String s1 = luavalue3.checkstring().toString();
-				String s2 = luavalue4.checkstring().toString();
+				String s1 = pathFrom.checkstring().toString();
+				String s2 = pathTo.checkstring().toString();
 
 				try {
 					Computer.this.m_fileSystem.move(s1, s2);
@@ -953,12 +946,12 @@ public class Computer {
 				}
 			}
 		});
-		luatable3.set("copy", new TwoArgFunction() {
+		fsTable.set("copy", new TwoArgFunction() {
 			@Override
-			public LuaValue call(LuaValue luavalue3, LuaValue luavalue4) {
+			public LuaValue call(LuaValue pathFrom, LuaValue pathTo) {
 				Computer.this.tryAbort();
-				String s1 = luavalue3.checkstring().toString();
-				String s2 = luavalue4.checkstring().toString();
+				String s1 = pathFrom.checkstring().toString();
+				String s2 = pathTo.checkstring().toString();
 
 				try {
 					Computer.this.m_fileSystem.copy(s1, s2);
@@ -968,11 +961,11 @@ public class Computer {
 				}
 			}
 		});
-		luatable3.set("delete", new OneArgFunction() {
+		fsTable.set("delete", new OneArgFunction() {
 			@Override
-			public LuaValue call(LuaValue luavalue3) {
+			public LuaValue call(LuaValue path) {
 				Computer.this.tryAbort();
-				String s1 = luavalue3.checkstring().toString();
+				String s1 = path.checkstring().toString();
 
 				try {
 					Computer.this.m_fileSystem.delete(s1);
@@ -982,12 +975,12 @@ public class Computer {
 				}
 			}
 		});
-		luatable3.set("open", new TwoArgFunction() {
+		fsTable.set("open", new TwoArgFunction() {
 			@Override
-			public LuaValue call(LuaValue luavalue3, LuaValue luavalue4) {
+			public LuaValue call(LuaValue path, LuaValue mode) {
 				Computer.this.tryAbort();
-				String s1 = luavalue3.checkstring().toString();
-				String s2 = luavalue4.checkstring().toString();
+				String s1 = path.checkstring().toString();
+				String s2 = mode.checkstring().toString();
 
 				try {
 					switch (s2) {
@@ -1017,11 +1010,11 @@ public class Computer {
 				}
 			}
 		});
-		luatable3.set("getDrive", new OneArgFunction() {
+		fsTable.set("getDrive", new OneArgFunction() {
 			@Override
-			public LuaValue call(LuaValue luavalue3) {
+			public LuaValue call(LuaValue path) {
 				Computer.this.tryAbort();
-				String s1 = luavalue3.checkstring().toString();
+				String s1 = path.checkstring().toString();
 
 				try {
 					synchronized (Computer.this.m_fileSystem) {
@@ -1040,13 +1033,13 @@ public class Computer {
 				}
 			}
 		});
-		luatable.set("fs", luatable3);
-		LuaTable luatable4 = new LuaTable();
-		luatable4.set("isPresent", new OneArgFunction() {
+		globalTable.set("fs", fsTable);
+		LuaTable peripheralTable = new LuaTable();
+		peripheralTable.set("isPresent", new OneArgFunction() {
 			@Override
-			public LuaValue call(LuaValue luavalue3) {
+			public LuaValue call(LuaValue side) {
 				Computer.this.tryAbort();
-				int i = Computer.this.parseSide(luavalue3.checkstring().toString());
+				int i = Computer.this.parseSide(side.checkstring().toString());
 				synchronized (Computer.this.m_peripherals) {
 					Computer.PeripheralWrapper peripheralwrapper1 = Computer.this.m_peripherals[i];
 					if (peripheralwrapper1 != null) {
@@ -1057,11 +1050,11 @@ public class Computer {
 				return LuaValue.FALSE;
 			}
 		});
-		luatable4.set("getType", new OneArgFunction() {
+		peripheralTable.set("getType", new OneArgFunction() {
 			@Override
-			public LuaValue call(LuaValue luavalue3) {
+			public LuaValue call(LuaValue side) {
 				Computer.this.tryAbort();
-				int i = Computer.this.parseSide(luavalue3.checkstring().toString());
+				int i = Computer.this.parseSide(side.checkstring().toString());
 				synchronized (Computer.this.m_peripherals) {
 					Computer.PeripheralWrapper peripheralwrapper1 = Computer.this.m_peripherals[i];
 					if (peripheralwrapper1 != null) {
@@ -1072,11 +1065,11 @@ public class Computer {
 				return LuaValue.NIL;
 			}
 		});
-		luatable4.set("getMethods", new OneArgFunction() {
+		peripheralTable.set("getMethods", new OneArgFunction() {
 			@Override
-			public LuaValue call(LuaValue luavalue3) {
+			public LuaValue call(LuaValue side) {
 				Computer.this.tryAbort();
-				int i = Computer.this.parseSide(luavalue3.checkstring().toString());
+				int i = Computer.this.parseSide(side.checkstring().toString());
 				synchronized (Computer.this.m_peripherals) {
 					Computer.PeripheralWrapper peripheralwrapper1 = Computer.this.m_peripherals[i];
 					if (peripheralwrapper1 != null) {
@@ -1094,16 +1087,16 @@ public class Computer {
 				return LuaValue.NIL;
 			}
 		});
-		luatable4.set("call", new VarArgFunction() {
+		peripheralTable.set("call", new VarArgFunction() {
 			@Override
-			public Varargs invoke(Varargs varargs) {
+			public Varargs invoke(Varargs side) {
 				Computer.this.tryAbort();
-				int i = Computer.this.parseSide(varargs.checkstring(1).toString());
-				String s1 = varargs.checkstring(2).toString();
+				int i = Computer.this.parseSide(side.checkstring(1).toString());
+				String s1 = side.checkstring(2).toString();
 				synchronized (Computer.this.m_peripherals) {
 					Computer.PeripheralWrapper peripheralwrapper1 = Computer.this.m_peripherals[i];
 					if (peripheralwrapper1 != null) {
-						Object[] aobj = Computer.this.toObjects(varargs, 3);
+						Object[] aobj = Computer.this.toObjects(side, 3);
 						Object[] aobj1 = peripheralwrapper1.call(s1, aobj);
 						return LuaValue.varargsOf(Computer.this.toValues(aobj1, 0));
 					}
@@ -1112,34 +1105,29 @@ public class Computer {
 				throw new LuaError("No peripheral attached");
 			}
 		});
-		luatable.set("peripheral", luatable4);
-		LuaTable luatable5 = new LuaTable();
-		luatable5.set("queueEvent", new VarArgFunction() {
+		globalTable.set("peripheral", peripheralTable);
+		LuaTable osTable = new LuaTable();
+		osTable.set("queueEvent", new VarArgFunction() {
 			@Override
-			public Varargs invoke(Varargs varargs) {
+			public Varargs invoke(Varargs event) {
 				Computer.this.tryAbort();
-				LuaString luastring = varargs.checkstring(1);
+				LuaString luastring = event.checkstring(1);
 				final LuaValue[] args = new LuaValue[6];
 				args[0] = luastring;
 
 				for (int i = 0; i < 5; i++) {
-					args[i + 1] = varargs.arg(i + 2);
+					args[i + 1] = event.arg(i + 2);
 				}
 
-				Computer.this.queueLuaEvent(new Computer.Event() {
-					@Override
-					public LuaValue[] getArguments() {
-						return args;
-					}
-				});
+				Computer.this.queueLuaEvent(() -> args);
 				return LuaValue.varargsOf(LuaValue.NOVALS);
 			}
 		});
-		luatable5.set("startTimer", new OneArgFunction() {
+		osTable.set("startTimer", new OneArgFunction() {
 			@Override
-			public LuaValue call(LuaValue luavalue3) {
+			public LuaValue call(LuaValue length) {
 				Computer.this.tryAbort();
-				double d = Math.max(luavalue3.checkdouble(), 0.0);
+				double d = Math.max(length.checkdouble(), 0.0);
 				LuaTable luatable7 = new LuaTable();
 				synchronized (Computer.this.m_timers) {
 					Computer.this.m_timers.add(new Timer(d, luatable7));
@@ -1147,11 +1135,11 @@ public class Computer {
 				}
 			}
 		});
-		luatable5.set("setAlarm", new OneArgFunction() {
+		osTable.set("setAlarm", new OneArgFunction() {
 			@Override
-			public LuaValue call(LuaValue luavalue3) {
+			public LuaValue call(LuaValue length) {
 				Computer.this.tryAbort();
-				double d = luavalue3.checkdouble();
+				double d = length.checkdouble();
 				if (!(d < 0.0) && !(d > 24.0)) {
 					LuaTable luatable7 = new LuaTable();
 					synchronized (Computer.this.m_alarms) {
@@ -1164,7 +1152,7 @@ public class Computer {
 				}
 			}
 		});
-		luatable5.set("shutdown", new ZeroArgFunction() {
+		osTable.set("shutdown", new ZeroArgFunction() {
 			@Override
 			public LuaValue call() {
 				Computer.this.tryAbort();
@@ -1172,7 +1160,7 @@ public class Computer {
 				return LuaValue.NIL;
 			}
 		});
-		luatable5.set("reboot", new ZeroArgFunction() {
+		osTable.set("reboot", new ZeroArgFunction() {
 			@Override
 			public LuaValue call() {
 				Computer.this.tryAbort();
@@ -1187,14 +1175,14 @@ public class Computer {
 				return LuaValue.valueOf(Computer.this.m_id);
 			}
 		};
-		luatable5.set("computerID", zeroargfunction);
-		luatable5.set("getComputerID", zeroargfunction);
-		luatable5.set("setComputerLabel", new OneArgFunction() {
+		osTable.set("computerID", zeroargfunction);
+		osTable.set("getComputerID", zeroargfunction);
+		osTable.set("setComputerLabel", new OneArgFunction() {
 			@Override
-			public LuaValue call(LuaValue luavalue3) {
+			public LuaValue call(LuaValue label) {
 				Computer.this.tryAbort();
-				if (!luavalue3.isnil()) {
-					String s1 = luavalue3.checkstring().toString();
+				if (!label.isnil()) {
+					String s1 = label.checkstring().toString();
 					ItemComputer.setComputerLabel(Computer.this.m_id, s1);
 				}
 				else {
@@ -1204,7 +1192,7 @@ public class Computer {
 				return LuaValue.NIL;
 			}
 		});
-		ZeroArgFunction zeroargfunction1 = new ZeroArgFunction() {
+		ZeroArgFunction getLabel = new ZeroArgFunction() {
 			@Override
 			public LuaValue call() {
 				Computer.this.tryAbort();
@@ -1212,9 +1200,9 @@ public class Computer {
 				return s1 != null ? LuaValue.valueOf(s1) : LuaValue.NIL;
 			}
 		};
-		luatable5.set("computerLabel", zeroargfunction1);
-		luatable5.set("getComputerLabel", zeroargfunction1);
-		luatable5.set("clock", new ZeroArgFunction() {
+		osTable.set("computerLabel", getLabel);
+		osTable.set("getComputerLabel", getLabel);
+		osTable.set("clock", new ZeroArgFunction() {
 			@Override
 			public LuaValue call() {
 				Computer.this.tryAbort();
@@ -1223,7 +1211,7 @@ public class Computer {
 				}
 			}
 		});
-		luatable5.set("time", new ZeroArgFunction() {
+		osTable.set("time", new ZeroArgFunction() {
 			@Override
 			public LuaValue call() {
 				Computer.this.tryAbort();
@@ -1232,17 +1220,17 @@ public class Computer {
 				}
 			}
 		});
-		luatable.set("os", luatable5);
+		globalTable.set("os", osTable);
 		if (this.m_environment.isHTTPEnabled()) {
-			LuaTable luatable6 = new LuaTable();
-			luatable6.set("request", new TwoArgFunction() {
+			LuaTable httpTable = new LuaTable();
+			httpTable.set("request", new TwoArgFunction() {
 				@Override
-				public LuaValue call(LuaValue luavalue3, LuaValue luavalue4) {
+				public LuaValue call(LuaValue url, LuaValue value) {
 					Computer.this.tryAbort();
-					String s1 = luavalue3.checkstring().toString();
+					String s1 = url.checkstring().toString();
 					String s2 = null;
-					if (luavalue4.isstring()) {
-						s2 = luavalue4.checkstring().toString();
+					if (value.isstring()) {
+						s2 = value.checkstring().toString();
 					}
 
 					try {
@@ -1257,7 +1245,7 @@ public class Computer {
 					}
 				}
 			});
-			luatable.set("http", luatable6);
+			globalTable.set("http", httpTable);
 		}
 
 		synchronized (this.m_peripheralsAsAPIs) {
@@ -1265,47 +1253,47 @@ public class Computer {
 				for (Computer.PeripheralWrapper peripheralwrapper : this.m_peripheralsAsAPIs) {
 					if (!peripheralwrapper.isAttached()) {
 						peripheralwrapper.attach("api");
-						peripheralwrapper.installAsAPI(luatable);
+						peripheralwrapper.installAsAPI(globalTable);
 					}
 				}
 			}
 		}
 
 		try {
-			LuaValue luavalue1 = null;
-			File file = new File(this.m_environment.getStaticDir(), "mods/ComputerCraft/lua/bios.lua");
+			LuaValue biosValue;
+			File biosFile = new File(this.m_environment.getStaticDir(), "mods/ComputerCraft/lua/bios.lua");
 
 			try {
-				BufferedReader bufferedreader = new BufferedReader(new FileReader(file));
-				StringBuilder stringbuilder = new StringBuilder();
-				String s = bufferedreader.readLine();
+				BufferedReader bufferedreader = new BufferedReader(new FileReader(biosFile));
+				StringBuilder biosBuilder = new StringBuilder();
+				String biosCursor = bufferedreader.readLine();
 
-				while (s != null) {
-					stringbuilder.append(s);
-					s = bufferedreader.readLine();
-					if (s != null) {
-						stringbuilder.append("\n");
+				while (biosCursor != null) {
+					biosBuilder.append(biosCursor);
+					biosCursor = bufferedreader.readLine();
+					if (biosCursor != null) {
+						biosBuilder.append("\n");
 					}
 				}
 
 				bufferedreader.close();
-				luavalue1 = luatable.get("assert").call(luavalue.call(LuaValue.valueOf(stringbuilder.toString()), LuaValue.valueOf("bios")));
+				biosValue = globalTable.get("assert").call(loadstringValue.call(LuaValue.valueOf(biosBuilder.toString()), LuaValue.valueOf("bios")));
 			} catch (IOException var16) {
 				throw new LuaError("IOException: " + var16);
 			}
 
-			LuaValue luavalue2 = luatable.get("coroutine");
-			this.m_mainFunction = luavalue2.get("create").call(luavalue1);
-			this.m_globals = luatable;
+			LuaValue coroutineValue = globalTable.get("coroutine");
+			this.m_mainFunction = coroutineValue.get("create").call(biosValue);
+			this.m_globals = globalTable;
 			this.m_eventFilter = null;
-		} catch (LuaError var17) {
+		} catch (LuaError luaError) {
 			synchronized (this.m_terminal) {
 				this.m_terminal.write("Failed to load mods/ComputerCraft/lua/bios.lua");
 				this.m_terminal.setCursorPos(0, this.m_terminal.getCursorY() + 1);
 				this.m_terminal.write("Check you have installed ComputerCraft correctly.");
 			}
 
-			var17.printStackTrace();
+			luaError.printStackTrace();
 			this.m_mainFunction = null;
 			this.m_globals = null;
 			this.m_eventFilter = null;
