@@ -47,7 +47,7 @@ public class ComputerThread {
 									System.out.println("ReCC: Error running task for computer " + (task.getOwner() != null ? task.getOwner().getID() : "???"));
 									var2.printStackTrace();
 								}
-							}, "ReCC-Computer-" + (task.getOwner() != null ? task.getOwner().getID() : "???"), mod_ComputerCraft.computerThreadStackLimit);
+							}, "ReCC-Computer-" + (task.getOwner() != null ? task.getOwner().getID() : "???"));
 							thread.start();
 							thread.join(5000L);
 							if (thread.isAlive()) {
@@ -69,6 +69,13 @@ public class ComputerThread {
 								}
 							}
 						} catch (InterruptedException ignored) {
+						}
+						catch (StackOverflowError e) {
+							System.out.println("ReCC: Stack overflow for main thread");
+							e.printStackTrace();
+						} catch (OutOfMemoryError e) {
+							System.out.println("ReCC: Out of memory for main thread");
+							e.printStackTrace();
 						} finally {
 							ComputerThread.m_busy = false;
 						}

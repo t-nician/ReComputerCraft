@@ -27,8 +27,6 @@ public class mod_ComputerCraft extends NetworkMod implements IGuiHandler, IConne
 	public static int modem_rangeDuringStorm = 1;
 	@MLProp(info="The maximum number tasks allowed to be queued at once", min=32, max=1024)
 	public static int computerThreadTaskQueueSize = 256;
-	@MLProp(info="The memory stack byte-size limit for each computer thread", min=1024, max=67_108_864)
-	public static long computerThreadStackLimit = 1_048_576;
 	@MLProp(info="The maximum byte-size limit for each computer directory", min=1024, max=67_108_864)
 	public static long maxComputerFolderSize = 524_288;
 	public static mod_ComputerCraft instance;

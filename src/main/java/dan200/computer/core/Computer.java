@@ -1511,7 +1511,7 @@ public class Computer {
 						Computer.this.m_stopped = false;
 						Computer.this.m_globals = null;
 						if (Computer.this.m_mainFunction != null) {
-							//((LuaThread) Computer.this.m_mainFunction).abandon();
+							((LuaThread) Computer.this.m_mainFunction).abandon();
 							Computer.this.m_mainFunction = null;
 						}
 
