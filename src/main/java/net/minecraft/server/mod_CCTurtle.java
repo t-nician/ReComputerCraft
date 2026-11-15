@@ -12,7 +12,7 @@ import forge.NetworkMod;
 
 public class mod_CCTurtle extends NetworkMod implements IGuiHandler {
 	@MLProp(info="The block ID of turtles. Do not change this unless there is a conflict")
-	public static int turtleBlockID = 209;
+	public static int turtleBlockID = 216; // Original is 209; changed to 216 for Tekkit compatibility.
 	@MLProp(info="The GUI ID of turtles. Do not change this unless there is a conflict")
 	public static int turtleGUIID = 101;
 	@MLProp(info="The method of fakeplayer to use for turtles. Options: 'perturtle', 'one', or 'null'. 'perturtle' is recommended and allows trust of individual turtles. Turtle fakeplayer names are '[ccturtle-<id>]', e.g. [ccturtle-3] for a turtle with ID of 3")
