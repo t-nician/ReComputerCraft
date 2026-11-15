@@ -5,28 +5,30 @@ import forge.*;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
-
 
 public class mod_ComputerCraft extends NetworkMod implements IGuiHandler, IConnectionHandler, IPacketHandler, ISaveEventHandler {
 	public static final int terminal_defaultWidth = 50;
 	public static final int terminal_defaultHeight = 18;
 	public static final int terminal_width = 50;
 	public static final int terminal_height = 18;
-	@MLProp
+	@MLProp(info="The block ID of computers. Do not change this unless there is a conflict")
 	public static int computerBlockID = 207;
-	@MLProp
+	@MLProp(info="The block ID of disk drives. Do not change this unless there is a conflict")
 	public static int diskDriveBlockID = 208;
-	@MLProp
+	@MLProp(info="The item ID of disks. Do not change this unless there is a conflict")
 	public static int diskItemID = 4000;
-	@MLProp
+	@MLProp(info="The GUI ID of disk drives. Do not change this unless there is a conflict")
 	public static int diskDriveGUIID = 100;
-	@MLProp
+	@MLProp(info="Enable to allow internet HTTP requests from computers. This is not recommended")
 	public static int enableAPI_http = 0;
-	@MLProp
+	@MLProp(info="The block range of modems during normal conditions")
 	public static int modem_range = 64;
-	@MLProp
+	@MLProp(info="The block range of modems during storms")
 	public static int modem_rangeDuringStorm = 1;
+	@MLProp(info="The maximum number tasks allowed to be queued at once", min=32, max=1024)
+	public static int computerThreadTaskQueueSize = 256;
+	@MLProp(info="The memory stack byte-size limit for each computer thread", min=1024, max=67_108_864)
+	public static long computerThreadStackLimit = 1_048_576;
 	public static mod_ComputerCraft instance;
 	public static BlockComputer computer;
 	public static ItemComputer itemComputer;

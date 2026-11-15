@@ -1,5 +1,6 @@
 package dan200.computer.core;
 
+import net.minecraft.server.mod_ComputerCraft;
 import org.luaj.vm2.OrphanedThread;
 
 import java.util.concurrent.LinkedBlockingQueue;
@@ -7,7 +8,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 public class ComputerThread {
 	private static final Object m_lock = new Object();
-	private static final LinkedBlockingQueue<Task> m_taskQueue = new LinkedBlockingQueue<>(256);
+	private static final LinkedBlockingQueue<Task> m_taskQueue = new LinkedBlockingQueue<>(mod_ComputerCraft.computerThreadTaskQueueSize);
 	private static Thread m_thread = null;
 	private static boolean m_busy = false;
 	private static boolean m_running = false;
@@ -46,7 +47,7 @@ public class ComputerThread {
 									System.out.println("ReCC: Error running task for computer " + (task.getOwner() != null ? task.getOwner().getID() : "???"));
 									var2.printStackTrace();
 								}
-							}, "ReCC-Computer-" + (task.getOwner() != null ? task.getOwner().getID() : "???"), 1_048_576);
+							}, "ReCC-Computer-" + (task.getOwner() != null ? task.getOwner().getID() : "???"), mod_ComputerCraft.computerThreadStackLimit);
 							thread.start();
 							thread.join(5000L);
 							if (thread.isAlive()) {

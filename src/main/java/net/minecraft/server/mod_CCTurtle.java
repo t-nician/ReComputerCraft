@@ -11,13 +11,13 @@ import forge.NetworkMod;
 
 
 public class mod_CCTurtle extends NetworkMod implements IGuiHandler {
-	@MLProp
+	@MLProp(info="The block ID of turtles. Do not change this unless there is a conflict")
 	public static int turtleBlockID = 209;
-	@MLProp
+	@MLProp(info="The GUI ID of turtles. Do not change this unless there is a conflict")
 	public static int turtleGUIID = 101;
-	@MLProp
+	@MLProp(info="The method of fakeplayer to use for turtles. Options: 'perturtle', 'one', or 'null'. 'perturtle' is recommended and allows trust of individual turtles. Turtle fakeplayer names are '[ccturtle-<id>]', e.g. [ccturtle-3] for a turtle with ID of 3")
 	public static String turtle_fakeplayer_method = "perturtle";
-	@MLProp
+	@MLProp(info="Should login events be triggered for turtle fakeplayers? This is not recommended and may cause problems with plugins")
 	public static boolean turtle_fakeplayer_dologin = false;
 	public static mod_CCTurtle instance;
 	public static BlockTurtle turtle;
