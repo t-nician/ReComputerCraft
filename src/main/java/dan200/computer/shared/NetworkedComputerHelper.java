@@ -9,6 +9,7 @@ import net.minecraft.server.EntityHuman;
 import net.minecraft.server.NBTTagCompound;
 import net.minecraft.server.TileEntity;
 import net.minecraft.server.mod_ComputerCraft;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 import java.io.File;
@@ -334,6 +335,7 @@ public class NetworkedComputerHelper extends NetworkedTerminalHelper implements 
 		}
 	}
 
+	private final HashMap<String, Character> lastChar = new HashMap<>();
 	private final HashMap<String, Long> lastCharTime = new HashMap<>();
 	private final HashMap<String, Integer> threatScore = new HashMap<>();
 	@Override
@@ -342,20 +344,33 @@ public class NetworkedComputerHelper extends NetworkedTerminalHelper implements 
 		if (mod_ComputerCraft.isMultiplayerServer()) {
 			switch (computercraftpacket.packetType) {
 				case 2:
-					final long now = System.nanoTime();
-					final long last = lastCharTime.getOrDefault(entityhuman.name, 0L);
-					lastCharTime.put(entityhuman.name, now);
-					if (last + 25_000 > now) {
-						final int score = threatScore.getOrDefault(entityhuman.name, 0) + 1;
-						threatScore.put(entityhuman.name, score);
-						if (score > 100 && entityhuman.getBukkitEntity() instanceof Player) {
-							threatScore.remove(entityhuman.name);
-							((Player)entityhuman.getBukkitEntity()).kickPlayer("Abnormal input rate detected. Hacking?");
-							return;
-						}
-					}
 					int i = computercraftpacket.dataInt[3];
 					char c = computercraftpacket.dataString[0].charAt(0);
+					// Ignore non-character keypresses, e.g. arrow key
+					if (c != 0x00) {
+						final long now = System.nanoTime();
+						final long lastCharChar = lastChar.getOrDefault(entityhuman.name, Character.MIN_VALUE);
+						final long lastCharTime = this.lastCharTime.getOrDefault(entityhuman.name, 0L);
+						lastChar.put(entityhuman.name, c);
+						this.lastCharTime.put(entityhuman.name, now);
+						// Ignore repeated keys and keypresses <= 2.5ms apart
+						if (c != lastCharChar && lastCharTime + 25_000 > now) {
+							final int score = threatScore.getOrDefault(entityhuman.name, 0) + 1;
+							threatScore.put(entityhuman.name, score);
+							if (score > 100) {
+								threatScore.remove(entityhuman.name);
+								// If player... Kick
+								if (Bukkit.getPlayer(entityhuman.name) != null) {
+									Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "kick " + entityhuman.name + " ReCC: Abnormal input rate detected. Hacking?");
+								}
+								// If not player... Kill
+								else {
+									entityhuman.die();
+								}
+								return;
+							}
+						}
+					}
 					this.pressKey(c, i);
 					break;
 				case 6:
