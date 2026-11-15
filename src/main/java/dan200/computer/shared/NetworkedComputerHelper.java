@@ -354,7 +354,7 @@ public class NetworkedComputerHelper extends NetworkedTerminalHelper implements 
 						lastChar.put(entityhuman.name, c);
 						this.lastCharTime.put(entityhuman.name, now);
 						// Ignore repeated keys and keypresses <= 2.5ms apart
-						if (c != lastCharChar && lastCharTime + 25_000 > now) {
+						if (c != lastCharChar && lastCharTime + mod_ComputerCraft.inputRateLimiter > now) {
 							final int score = threatScore.getOrDefault(entityhuman.name, 0) + 1;
 							threatScore.put(entityhuman.name, score);
 							if (score > 100) {

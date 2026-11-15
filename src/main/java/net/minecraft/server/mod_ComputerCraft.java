@@ -29,6 +29,8 @@ public class mod_ComputerCraft extends NetworkMod implements IGuiHandler, IConne
 	public static int computerThreadTaskQueueSize = 256;
 	@MLProp(info="The maximum byte-size limit for each computer directory", min=1024, max=67_108_864)
 	public static long maxComputerFolderSize = 524_288;
+	@MLProp(info="The minimum number of nanoseconds between unique character inputs before flagging as suspicious", min=0, max=1_000_000)
+	public static long inputRateLimiter = 25_000;
 	public static mod_ComputerCraft instance;
 	public static BlockComputer computer;
 	public static ItemComputer itemComputer;
