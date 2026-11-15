@@ -31,6 +31,7 @@ public class Computer {
 	private FileSystem m_fileSystem;
 	private boolean m_on;
 	private boolean m_onDesired;
+	private boolean m_persistedOn;
 	private boolean m_rebootDesired;
 	private boolean m_stopped;
 	private boolean m_aborted;
@@ -126,6 +127,7 @@ public class Computer {
 		synchronized (this) {
 			this.m_onDesired = true;
 			this.m_rebootDesired = false;
+			this.m_persistedOn = true;
 		}
 	}
 
@@ -133,6 +135,7 @@ public class Computer {
 		synchronized (this) {
 			this.m_onDesired = false;
 			this.m_rebootDesired = false;
+			this.m_persistedOn = false;
 		}
 	}
 
@@ -140,6 +143,7 @@ public class Computer {
 		synchronized (this) {
 			this.m_onDesired = false;
 			this.m_rebootDesired = true;
+			this.m_persistedOn = true;
 		}
 	}
 
@@ -157,16 +161,17 @@ public class Computer {
 
 	public void destroy() {
 		synchronized (this) {
+			this.m_onDesired = false;
+			this.m_rebootDesired = false;
+
 			if (this.m_on) {
-				this.m_onDesired = false;
-				this.m_rebootDesired = false;
 				this.stopComputer();
 			}
 		}
 	}
 
 	public synchronized void writeToNBT(NBTTagCompound nbttagcompound) {
-		nbttagcompound.setBoolean("on", this.isOn() || this.m_onDesired);
+		nbttagcompound.setBoolean("on", this.isOn() || this.m_persistedOn);
 		String s = this.getUserDir();
 		if (s != null) {
 			nbttagcompound.setString("userDir", s);
@@ -291,12 +296,7 @@ public class Computer {
 			if (this.m_on) {
 				synchronized (this.m_input) {
 					if (this.m_inputChanged) {
-						this.queueLuaEvent(new Computer.Event() {
-							@Override
-							public LuaValue[] getArguments() {
-								return new LuaValue[] {LuaValue.valueOf("redstone")};
-							}
-						});
+						this.queueLuaEvent(() -> new LuaValue[] {LuaValue.valueOf("redstone")});
 						this.m_inputChanged = false;
 					}
 				}
