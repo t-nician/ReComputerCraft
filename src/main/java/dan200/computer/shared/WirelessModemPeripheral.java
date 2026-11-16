@@ -95,6 +95,10 @@ public class WirelessModemPeripheral implements IPeripheral, IWirelessReceiver {
                 if (aobj.length == 1) {
                     if (aobj[0] instanceof Boolean) {
                         this.m_global = (boolean) aobj[0];
+
+                        if (!this.m_global) {
+                            this.m_range = this.getRange();
+                        }
                     } else if (aobj[0] instanceof Double) {
                         Double range = (Double) aobj[0];
                         if (range > 0) {
