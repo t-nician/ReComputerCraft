@@ -68,7 +68,9 @@ public class WirelessModemPeripheral implements IPeripheral, IWirelessReceiver {
    @Override
    public synchronized void receive(int i, String s, double d) {
       if (this.m_open) {
-        if (this.m_global || d <= this.m_range) {
+        double range = this.m_range * this.m_range;
+
+        if (this.m_global || d <= range) {
           this.m_computer.queueEvent("rednet_message", new Object[]{i, s, d});
         }
       }
