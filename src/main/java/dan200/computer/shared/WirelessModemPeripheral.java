@@ -196,6 +196,7 @@ public class WirelessModemPeripheral implements IPeripheral, IWirelessReceiver {
       this.m_network = WirelessNetwork.get(this.m_owner.world);
       this.m_network.addReceiver(this);
       this.m_open = false;
+      this.m_www = false;
    }
 
    @Override
@@ -205,6 +206,7 @@ public class WirelessModemPeripheral implements IPeripheral, IWirelessReceiver {
          this.m_network = null;
          this.m_computer = null;
          this.m_open = false;
+         this.m_www = false;
       }
    }
 
