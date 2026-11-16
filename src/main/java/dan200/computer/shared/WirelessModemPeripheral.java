@@ -73,7 +73,7 @@ public class WirelessModemPeripheral implements IPeripheral, IWirelessReceiver {
 
    @Override
    public synchronized void receiveGlobal(int i, String s, double d) {
-    if (this.m_open) {
+    if (this.m_open && this.m_www) {
          this.m_computer.queueEvent("rednet_global_message", new Object[]{i, s, d});
       }
    }
@@ -166,8 +166,8 @@ public class WirelessModemPeripheral implements IPeripheral, IWirelessReceiver {
             if (aobj.length >= 2 && aobj[0] instanceof Double && aobj[1] instanceof String) {
                int j = (int)((Double)aobj[0]).doubleValue();
                synchronized (this) {
-                  if (!this.m_open) {
-                     throw new Exception("Must call open before sending");
+                  if (!this.m_open || !this.m_www) {
+                     throw new Exception("Must call www.open or rednet.openGlobal before sending");
                   }
 
                   this.m_network.transmitGlobal(computerAccess.getID(), j, (String)aobj[1], this.m_position.a, this.m_position.b, this.m_position.c);
