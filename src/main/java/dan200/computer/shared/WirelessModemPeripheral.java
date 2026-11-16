@@ -13,7 +13,7 @@ public class WirelessModemPeripheral implements IPeripheral, IWirelessReceiver {
    private Vec3D m_position;
    private boolean m_open;
    private boolean m_changed;
-   private boolean m_www;
+   private volatile boolean m_www;
    static final boolean $assertionsDisabled = !WirelessModemPeripheral.class.desiredAssertionStatus();
 
    public WirelessModemPeripheral(TileEntity tileEntity) {
