@@ -79,7 +79,7 @@ public class WirelessModemPeripheral implements IPeripheral, IWirelessReceiver {
    }
 
    @Override
-   public synchronized boolean isWWW() {
+   public boolean isWWW() {
     return this.m_www;
    }
 
