@@ -402,6 +402,9 @@ local ok, err = pcall( function()
 		function()
 			rednet.run()
 		end,
+        function()
+            www.run()
+        end,
 		function()
 			os.run( {}, "rom/programs/shell" )
 		end

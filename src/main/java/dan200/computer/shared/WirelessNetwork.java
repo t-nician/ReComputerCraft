@@ -51,6 +51,27 @@ public class WirelessNetwork {
 		}
 	}
 
+     public synchronized void transmitGlobal(int i, int j, String s, double d1, double d2, double d3) {
+        IWirelessReceiver wirelessReceiver = this.m_receivers.get(j);
+
+		if (wirelessReceiver != null) {
+			this.tryTransmitGlobal(wirelessReceiver, i, s, d1, d2, d3);
+		}
+    }
+
+    private void tryTransmitGlobal(IWirelessReceiver wirelessReceiver, int i, String s, double d1, double d2, double d3) {
+        if (wirelessReceiver.getID() != i) {
+            boolean from_is_www = this.m_receivers.get(i).isWWW();
+            boolean target_is_www = wirelessReceiver.isWWW();
+
+            double distance = wirelessReceiver.getWorldPosition().d(d1, d2, d3);
+
+            if (from_is_www && target_is_www) {
+                wirelessReceiver.receiveGlobal(i, s, Math.sqrt(distance));
+            }
+        }
+    }
+
 	private void tryTransmit(IWirelessReceiver wirelessReceiver, int i, String s, double d, double d1, double d2, double d3) {
 		if (wirelessReceiver.getID() != i) {
 			Vec3D vec3d = wirelessReceiver.getWorldPosition();

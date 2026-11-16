@@ -13,6 +13,7 @@ public class WirelessModemPeripheral implements IPeripheral, IWirelessReceiver {
    private Vec3D m_position;
    private boolean m_open;
    private boolean m_changed;
+   private boolean m_www;
    static final boolean $assertionsDisabled = !WirelessModemPeripheral.class.desiredAssertionStatus();
 
    public WirelessModemPeripheral(TileEntity tileEntity) {
@@ -21,6 +22,7 @@ public class WirelessModemPeripheral implements IPeripheral, IWirelessReceiver {
       this.m_computer = null;
       this.m_open = false;
       this.m_changed = true;
+      this.m_www = false;
    }
 
    public void setOwnerAndPos(TileEntity tileEntity, int i, int j, int k) {
@@ -70,13 +72,25 @@ public class WirelessModemPeripheral implements IPeripheral, IWirelessReceiver {
    }
 
    @Override
+   public synchronized void receiveGlobal(int i, String s, double d) {
+    if (this.m_open) {
+         this.m_computer.queueEvent("rednet_global_message", new Object[]{i, s, d});
+      }
+   }
+
+   @Override
+   public synchronized boolean isWWW() {
+    return this.m_www;
+   }
+
+   @Override
    public String getType() {
       return "modem";
    }
 
    @Override
    public String[] getMethodNames() {
-      return new String[]{"open", "close", "send", "broadcast"};
+      return new String[]{"open", "close", "send", "broadcast", "openGlobal", "closeGlobal", "sendGlobal"};
    }
 
    @Override
@@ -127,6 +141,40 @@ public class WirelessModemPeripheral implements IPeripheral, IWirelessReceiver {
             }
 
             throw new Exception("Expected string");
+             case 4:
+            synchronized (this) {
+               if (!this.m_open) {
+                  this.m_open = true;
+                  this.m_changed = true;
+                  this.m_www = true;
+               }
+
+               return null;
+            }
+
+        case 5:
+            synchronized (this) {
+               if (this.m_open) {
+                  this.m_www = false;
+                  this.m_open = false;
+                  this.m_changed = true;
+               }
+
+               return null;
+            }
+        case 6:
+            if (aobj.length >= 2 && aobj[0] instanceof Double && aobj[1] instanceof String) {
+               int j = (int)((Double)aobj[0]).doubleValue();
+               synchronized (this) {
+                  if (!this.m_open) {
+                     throw new Exception("Must call open before sending");
+                  }
+
+                  this.m_network.transmitGlobal(computerAccess.getID(), j, (String)aobj[1], this.m_position.a, this.m_position.b, this.m_position.c);
+                  
+                  return null;
+               }
+            }
          default:
             if (!$assertionsDisabled) {
                throw new AssertionError();
