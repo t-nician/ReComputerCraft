@@ -13,6 +13,8 @@ public class WirelessModemPeripheral implements IPeripheral, IWirelessReceiver {
    private Vec3D m_position;
    private boolean m_open;
    private boolean m_changed;
+   private boolean m_global;
+   private double m_range;
    static final boolean $assertionsDisabled = !WirelessModemPeripheral.class.desiredAssertionStatus();
 
    public WirelessModemPeripheral(TileEntity tileEntity) {
@@ -21,6 +23,7 @@ public class WirelessModemPeripheral implements IPeripheral, IWirelessReceiver {
       this.m_computer = null;
       this.m_open = false;
       this.m_changed = true;
+      this.m_global = false;
    }
 
    public void setOwnerAndPos(TileEntity tileEntity, int i, int j, int k) {
@@ -65,7 +68,9 @@ public class WirelessModemPeripheral implements IPeripheral, IWirelessReceiver {
    @Override
    public synchronized void receive(int i, String s, double d) {
       if (this.m_open) {
-         this.m_computer.queueEvent("rednet_message", new Object[]{i, s, d});
+        if (this.m_global || d <= this.m_range) {
+          this.m_computer.queueEvent("rednet_message", new Object[]{i, s, d});
+        }
       }
    }
 
@@ -83,8 +88,25 @@ public class WirelessModemPeripheral implements IPeripheral, IWirelessReceiver {
    public Object[] callMethod(IComputerAccess computerAccess, int i, Object[] aobj) throws Exception {
       switch (i) {
          case 0:
-            synchronized (this) {
+            synchronized (this) {    
+                System.out.println("rednet.open called!");
                if (!this.m_open) {
+                if (aobj.length == 1) {
+                    if (aobj[0] instanceof Boolean && (Boolean) aobj[0] == true) {
+                        this.m_global = true;
+                    } else if (aobj[0] instanceof Double) {
+                        Double range = (Double) aobj[0];
+                        if (range > 0) {
+                          this.m_range = range;    
+                        } else {
+                            throw new Exception("Range must be greater than 0!");
+                        }
+                    } else if (aobj[0] != null) {
+                        throw new Exception("Invalid third argument rednet.open, must be either a boolean or number!");
+                    }
+                  } else {
+                    this.m_range = this.getRange();
+                  }
                   this.m_open = true;
                   this.m_changed = true;
                }
@@ -95,6 +117,9 @@ public class WirelessModemPeripheral implements IPeripheral, IWirelessReceiver {
             synchronized (this) {
                if (this.m_open) {
                   this.m_open = false;
+                  this.m_global = false;
+                  this.m_range = this.getRange();
+
                   this.m_changed = true;
                }
 
@@ -108,7 +133,7 @@ public class WirelessModemPeripheral implements IPeripheral, IWirelessReceiver {
                      throw new Exception("Must call open before sending");
                   }
 
-                  this.m_network.transmit(computerAccess.getID(), j, (String)aobj[1], this.getRange(), this.m_position.a, this.m_position.b, this.m_position.c);
+                  this.m_network.transmit(computerAccess.getID(), j, (String)aobj[1], this.m_position.a, this.m_position.b, this.m_position.c);
                   return null;
                }
             }
@@ -121,7 +146,7 @@ public class WirelessModemPeripheral implements IPeripheral, IWirelessReceiver {
                      throw new Exception("Must call open before sending");
                   }
 
-                  this.m_network.broadcast(computerAccess.getID(), (String)aobj[0], this.getRange(), this.m_position.a, this.m_position.b, this.m_position.c);
+                  this.m_network.broadcast(computerAccess.getID(), (String)aobj[0], this.m_position.a, this.m_position.b, this.m_position.c);
                   return null;
                }
             }
