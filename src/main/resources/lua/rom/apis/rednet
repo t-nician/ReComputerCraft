@@ -325,6 +325,8 @@ function open( sSide, nClockRate, range )
 	if type( nClockRate ) ~= "number" or nClockRate <= 0 then
 		error( "positive number expected" )
 	end
+
+    runRoutine( "close", sSide)
 	runRoutine( "open", sSide, nClockRate, range )
 end
 
