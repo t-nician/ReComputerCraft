@@ -60,8 +60,10 @@ public class WirelessNetwork {
     }
 
     private void tryTransmitGlobal(IWirelessReceiver wirelessReceiver, int i, String s, double d1, double d2, double d3) {
-        if (wirelessReceiver.getID() != i) {
-            boolean from_is_www = this.m_receivers.get(i).isWWW();
+        IWirelessReceiver fromWirelessReceiver = this.m_receivers.get(i);
+
+        if (fromWirelessReceiver != null && wirelessReceiver.getID() != i) {
+            boolean from_is_www = fromWirelessReceiver.isWWW();
             boolean target_is_www = wirelessReceiver.isWWW();
 
             double distance = wirelessReceiver.getWorldPosition().d(d1, d2, d3);
