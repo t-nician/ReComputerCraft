@@ -167,7 +167,7 @@ public class WirelessModemPeripheral implements IPeripheral, IWirelessReceiver {
                int j = (int)((Double)aobj[0]).doubleValue();
                synchronized (this) {
                   if (!this.m_open || !this.m_www) {
-                     throw new Exception("Must call www.open or rednet.openGlobal before sending");
+                     throw new Exception("Must call www.open before sending");
                   }
 
                   this.m_network.transmitGlobal(computerAccess.getID(), j, (String)aobj[1], this.m_position.a, this.m_position.b, this.m_position.c);
