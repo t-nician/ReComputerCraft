@@ -89,7 +89,6 @@ public class WirelessModemPeripheral implements IPeripheral, IWirelessReceiver {
       switch (i) {
          case 0:
             synchronized (this) {    
-                System.out.println("rednet.open called!");
                if (!this.m_open) {
                 if (aobj.length == 1) {
                     if (aobj[0] instanceof Boolean && (Boolean) aobj[0] == true) {
