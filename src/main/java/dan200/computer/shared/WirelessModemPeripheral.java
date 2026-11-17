@@ -14,6 +14,7 @@ public class WirelessModemPeripheral implements IPeripheral, IWirelessReceiver {
    private boolean m_open;
    private boolean m_changed;
    private boolean m_global;
+   private boolean m_custom_range;
    private double m_range;
    static final boolean $assertionsDisabled = !WirelessModemPeripheral.class.desiredAssertionStatus();
 
@@ -24,6 +25,8 @@ public class WirelessModemPeripheral implements IPeripheral, IWirelessReceiver {
       this.m_open = false;
       this.m_changed = true;
       this.m_global = false;
+      this.m_custom_range = false;
+      this.m_range = 0;
    }
 
    public void setOwnerAndPos(TileEntity tileEntity, int i, int j, int k) {
@@ -68,9 +71,11 @@ public class WirelessModemPeripheral implements IPeripheral, IWirelessReceiver {
    @Override
    public synchronized void receive(int i, String s, double d) {
       if (this.m_open) {
-        double range = this.m_range * this.m_range;
+        double config_range = this.getRange();
 
-        if (this.m_global || d <= range) {
+        config_range = config_range * config_range;
+
+        if (this.m_global || (this.m_custom_range && d <= this.m_range * this.m_range) || d <= config_range) {
           this.m_computer.queueEvent("rednet_message", new Object[]{i, s, d});
         }
       }
@@ -94,23 +99,21 @@ public class WirelessModemPeripheral implements IPeripheral, IWirelessReceiver {
                if (!this.m_open) {
                 if (aobj.length == 1) {
                     if (aobj[0] instanceof Boolean) {
-                        this.m_global = (boolean) aobj[0];
+                        boolean result = (boolean) aobj[0];
 
-                        if (!this.m_global) {
-                            this.m_range = this.getRange();
-                        }
+                        this.m_global = result;
+                        this.m_custom_range = result;
                     } else if (aobj[0] instanceof Double) {
                         Double range = (Double) aobj[0];
                         if (range > 0) {
-                          this.m_range = range;    
+                          this.m_range = range;
+                          this.m_custom_range = true;
                         } else {
                             throw new Exception("Range must be greater than 0!");
                         }
                     } else if (aobj[0] != null) {
                         throw new Exception("Invalid third argument rednet.open, must be either a boolean or number!");
                     }
-                  } else {
-                    this.m_range = this.getRange();
                   }
                   this.m_open = true;
                   this.m_changed = true;
@@ -123,7 +126,7 @@ public class WirelessModemPeripheral implements IPeripheral, IWirelessReceiver {
                if (this.m_open) {
                   this.m_open = false;
                   this.m_global = false;
-                  this.m_range = this.getRange();
+                  this.m_custom_range = false;
 
                   this.m_changed = true;
                }
